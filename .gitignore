@@ -1,0 +1,14 @@
+Drivers
+EWARM
+Middlewares
+.mxproject
+Makefile
+build
+.vscode
+libmicroros
+custombuild
+.tools/
+build-linux/
+# STM32CubeIDE build artifacts
+Debug/
+Release/
