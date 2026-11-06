@@ -47,8 +47,11 @@ MEMORY
   /* DTCM RAM (fast, CPU only) */
   DTCMRAM (xrw) : ORIGIN = 0x20000000, LENGTH = 128K
 
-  /* SRAM1+SRAM2 (DMA-capable) */
-  RAM     (xrw) : ORIGIN = 0x20020000, LENGTH = 384K
+  /* SRAM1 (DMA-capable) */
+  RAM     (xrw) : ORIGIN = 0x20020000, LENGTH = 368K
+
+  /* SRAM2 (DMA Descriptors & Buffers, Non-Cacheable) */
+  RAM_D2  (xrw) : ORIGIN = 0x2007C000, LENGTH = 16K
 
   FLASH   (rx)  : ORIGIN = 0x08000000, LENGTH = 2048K
 }
@@ -170,27 +173,29 @@ SECTIONS
     __bss_end__ = _ebss;
   } >RAM
 
-/* Ethernet DMA descriptors and RX buffers must be in DMA-capable SRAM */
+/* Ethernet DMA descriptors and RX buffers in SRAM2 (RAM_D2) */
   .RxDecripSection (NOLOAD) :
   {
     . = ALIGN(32);
     *(.RxDecripSection)
+    *(.RxDescripSection)
     . = ALIGN(32);
-  } >RAM
+  } >RAM_D2
 
   .TxDecripSection (NOLOAD) :
   {
     . = ALIGN(32);
     *(.TxDecripSection)
+    *(.TxDescripSection)
     . = ALIGN(32);
-  } >RAM
+  } >RAM_D2
 
   .RxArraySection (NOLOAD) :
   {
-    . = ALIGN(32);
+    . = ALIGN(512);
     *(.RxArraySection)
     . = ALIGN(32);
-  } >RAM
+  } >RAM_D2
   
   /* User_heap_stack section, used to check that there is enough "RAM" Ram  type memory left */
   ._user_heap_stack :

@@ -169,3 +169,4 @@ ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.0, y: 0.0
 3. **Cảm biến Hall không đếm xung:**
    - Kiểm tra chân cấp nguồn 5V/3.3V và mass GND của cảm biến Hall.
    - Thử quay bánh xe bằng tay và đo điện áp trên các chân Hall (điện áp phải dao động giữa 0V và 3.3V/5V khi bánh xe xoay).
+

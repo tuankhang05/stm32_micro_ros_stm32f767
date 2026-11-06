@@ -625,18 +625,18 @@ osThreadId_t teleopTaskHandle;
 
 const osThreadAttr_t encoderTask_attributes = {
   .name       = "EncoderTask",
-  .priority   = (osPriority_t) osPriorityRealtime,
-  .stack_size = 256 * 4
+  .priority   = (osPriority_t) osPriorityHigh,
+  .stack_size = 512 * 4
 };
 const osThreadAttr_t motorTask_attributes = {
   .name       = "MotorTask",
-  .priority   = (osPriority_t) osPriorityRealtime,
-  .stack_size = 256 * 4
+  .priority   = (osPriority_t) osPriorityHigh,
+  .stack_size = 512 * 4
 };
 const osThreadAttr_t odometryTask_attributes = {
   .name       = "OdometryTask",
-  .priority   = (osPriority_t) osPriorityRealtime,
-  .stack_size = 256 * 4
+  .priority   = (osPriority_t) osPriorityAboveNormal,
+  .stack_size = 512 * 4
 };
 const osThreadAttr_t PS2Task_attributes = {
   .name       = "PS2Task",
@@ -824,52 +824,13 @@ void StartDefaultTask(void *argument)
                 }
 
                 /*
-                * PHY vẫn UP nhưng không nói chuyện được với Agent.
-                *
-                * Không recovery ngay vì lúc mini-PC mới boot
-                * Agent có thể chưa chạy.
+                * PHY vẫn UP nhưng chưa nói chuyện được với Agent (do Agent chưa bật).
+                * Giữ nguyên mạng LwIP hoạt động ổn định để luôn luôn ping được,
+                * kiên nhẫn chờ Agent mà KHÔNG reset phần cứng làm sập Ethernet.
                 */
                 if (wait_agent_fail_cnt < 255U)
                 {
                     wait_agent_fail_cnt++;
-                }
-
-                /*
-                * 20 lần x 500 ms ~= 10 giây.
-                *
-                * Nếu sau khoảng 10 giây vẫn không nhận được
-                * phản hồi thì có khả năng ETH RX/MAC/DMA bị kẹt.
-                */
-                if (wait_agent_fail_cnt >= 20U)
-                {
-                    uint32_t now = osKernelGetTickCount();
-
-                    /*
-                    * Giới hạn tần suất recovery để tránh
-                    * reset Ethernet liên tục khi mini-PC thật sự tắt.
-                    */
-                    if ((now - last_eth_recovery_ms) >= 10000U)
-                    {
-                        last_eth_recovery_ms = now;
-                        
-                        dbg_eth_recovery_cnt++;
-                        ethernet_request_recovery();
-                    }
-
-                    wait_agent_fail_cnt = 0;
-
-                    /*
-                    * Cho ethernet_link_thread đủ thời gian:
-                    *
-                    * HAL_ETH_Stop_IT
-                    * HAL_ETH_DeInit
-                    * HAL_ETH_Init
-                    * HAL_ETH_Start_IT
-                    */
-                    osDelay(1500);
-
-                    state = UROS_STATE_WAIT_NET;
-                    break;
                 }
 
                 osDelay(500);
@@ -1533,6 +1494,7 @@ void MotorControlTask(void *argument)
 
 void OdometryTask(void *argument)
 {
+    Odometry_Init();
     const TickType_t period = pdMS_TO_TICKS(ODOMETRY_PERIOD_MS);
     TickType_t lastWake = xTaskGetTickCount();
     TickType_t lastTick = lastWake;

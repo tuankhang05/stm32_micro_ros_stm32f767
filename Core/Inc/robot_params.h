@@ -15,7 +15,7 @@
  * 0: TẮT micro-ROS (chạy test phần cứng độc lập: Hall, PWM, PID, PS2 pad)
  * 1: BẬT micro-ROS (khi đã build thư viện libmicroros)
  * ==================================================================== */
-#define ENABLE_MICROROS            0
+#define ENABLE_MICROROS            1
 
 /* ====================================================================
  * THÔNG SỐ CẢM BIẾN HALL & ĐỘNG CƠ BLDC HOVERBOARD

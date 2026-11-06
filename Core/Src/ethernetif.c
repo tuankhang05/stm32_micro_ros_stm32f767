@@ -199,6 +199,7 @@ void HAL_ETH_RxCpltCallback(ETH_HandleTypeDef *handlerEth)
 void HAL_ETH_TxCpltCallback(ETH_HandleTypeDef *handlerEth)
 {
   osSemaphoreRelease(TxPktSemaphore);
+  HAL_ETH_ReleaseTxPacket(handlerEth);
 }
 /**
   * @brief  Ethernet DMA transfer error callback
@@ -255,8 +256,8 @@ static void low_level_init(struct netif *netif)
   hal_eth_init_status = HAL_ETH_Init(&heth);
 
   memset(&TxConfig, 0 , sizeof(ETH_TxPacketConfig));
-  TxConfig.Attributes = ETH_TX_PACKETS_FEATURES_CSUM | ETH_TX_PACKETS_FEATURES_CRCPAD;
-  TxConfig.ChecksumCtrl = ETH_CHECKSUM_IPHDR_PAYLOAD_INSERT_PHDR_CALC;
+  TxConfig.Attributes = ETH_TX_PACKETS_FEATURES_CRCPAD;
+  TxConfig.ChecksumCtrl = ETH_CHECKSUM_DISABLE;
   TxConfig.CRCPadCtrl = ETH_CRC_PAD_INSERT;
 
   /* End ETH HAL Init */
@@ -359,6 +360,13 @@ static void low_level_init(struct netif *netif)
     MACConf.Speed = speed;
     HAL_ETH_SetMACConfig(&heth, &MACConf);
 
+    ETH_MACFilterConfigTypeDef MACFilterConf = {0};
+    MACFilterConf.PromiscuousMode = ENABLE;
+    MACFilterConf.ReceiveAllMode = ENABLE;
+    MACFilterConf.PassAllMulticast = ENABLE;
+    MACFilterConf.BroadcastFilter = DISABLE;
+    HAL_ETH_SetMACFilterConfig(&heth, &MACFilterConf);
+
     //volatile HAL_StatusTypeDef g_eth_start_status;
     //g_eth_start_status = HAL_ETH_Start_IT(&heth);
     HAL_ETH_Start_IT(&heth);
@@ -415,6 +423,9 @@ static err_t low_level_output(struct netif *netif, struct pbuf *p)
 
     Txbuffer[i].buffer = q->payload;
     Txbuffer[i].len = q->len;
+
+    /* Clean D-Cache so TX DMA reads updated payload from physical RAM */
+    SCB_CleanDCache_by_Addr((uint32_t *)((uint32_t)q->payload & ~0x1FU), q->len + 32);
 
     if(i>0)
     {
@@ -953,6 +964,13 @@ void ethernet_link_thread(void* argument)
                     	continue;
                     }
 
+                    ETH_MACFilterConfigTypeDef MACFilterConf = {0};
+                    MACFilterConf.PromiscuousMode = ENABLE;
+                    MACFilterConf.ReceiveAllMode = ENABLE;
+                    MACFilterConf.PassAllMulticast = ENABLE;
+                    MACFilterConf.BroadcastFilter = DISABLE;
+                    HAL_ETH_SetMACFilterConfig(&heth, &MACFilterConf);
+
                     if (HAL_ETH_Start_IT(&heth) != HAL_OK)
                     {
                     	HAL_ETH_Stop_IT(&heth);
@@ -1062,6 +1080,13 @@ void ethernet_link_thread(void* argument)
             	osDelay(1000);
             	continue;
             }
+
+            ETH_MACFilterConfigTypeDef MACFilterConf2 = {0};
+            MACFilterConf2.PromiscuousMode = ENABLE;
+            MACFilterConf2.ReceiveAllMode = ENABLE;
+            MACFilterConf2.PassAllMulticast = ENABLE;
+            MACFilterConf2.BroadcastFilter = DISABLE;
+            HAL_ETH_SetMACFilterConfig(&heth, &MACFilterConf2);
 
             if (HAL_ETH_Start_IT(&heth) != HAL_OK)
             {
